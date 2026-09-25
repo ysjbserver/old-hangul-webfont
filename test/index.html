@@ -28,8 +28,10 @@ textarea { width: 100%; max-width: 640px; font-size: 18px; }
 <body>
 <h1>Old Hangul Webfont Test / 옛한글 웹폰트 시험</h1>
 <p>Each sample should appear as one composed syllable block per syllable.
-The check column measures the width of each syllable: a composed syllable is one cell wide.<br>
-각 음절이 한 덩어리로 모여 보이면 정상입니다. 판정 칸은 음절 폭을 재서, 한 칸 폭이면 ✓, 풀려서 넓어지면 ✗로 표시합니다.</p>
+The check measures the width of each syllable: a composed syllable is one cell wide, and a tone mark adds less than half a cell.
+The numbers are widths at 100px: first one cell (the width of 가), then each syllable (tone marks after +).<br>
+각 음절이 한 덩어리로 모여 보이면 정상입니다. 판정은 음절 폭을 재서, 한 칸 폭이고 방점이 반 칸보다 좁으면 ✓, 풀려서 넓어지면 ✗로 표시합니다.
+숫자는 100px 크기에서 잰 폭입니다. 처음 숫자가 한 칸('가'의 폭)이고, 이어서 음절마다의 폭입니다(방점은 + 뒤에 표시).</p>
 <p id="env"></p>
 
 <div class="wrap"><table id="results"><thead><tr>
@@ -37,10 +39,16 @@ The check column measures the width of each syllable: a composed syllable is one
 </tr></thead><tbody></tbody></table></div>
 
 <h2 style="font-size:16px">Vertical writing / 세로쓰기</h2>
-<p>In vertical text the tone marks (〮 〯) should sit beside the syllable (on its left) without taking a cell of their own.
-The check measures the height of a syllable with a tone mark: it should be one cell.<br>
-세로쓰기에서는 방점이 음절 옆(왼쪽)에 붙고, 따로 한 칸을 차지하지 않아야 합니다. 판정은 방점이 붙은 음절의 세로 길이가 한 칸인지 잽니다.</p>
-<div id="vertical" class="wrap" style="display:flex;gap:24px"></div>
+<p>Syllables should stand upright, and tone marks should sit beside the syllable (on its left) without taking a cell of their own.
+The samples are split so that it is clear which kind of character causes a problem.
+<code>upright</code> forces every character upright with CSS <code>text-orientation: upright</code>.
+The numbers are the heights of 랏 and 랏+tone mark at 100px; they should be equal.<br>
+음절은 똑바로 서 있어야 하고, 방점은 음절 옆(왼쪽)에 붙어 따로 한 칸을 차지하지 않아야 합니다.
+어떤 글자가 문제를 일으키는지 알 수 있도록 예시를 나눴습니다. <code>upright</code>는 CSS <code>text-orientation: upright</code>로 모든 글자를 세운 것입니다.
+숫자는 100px 크기에서 '랏'과 '랏+방점'의 세로 길이이며, 둘이 같아야 합니다.</p>
+<div class="wrap"><table id="vertical"><thead><tr>
+  <th>Font / 글꼴</th><th>Modern / 현대 한글</th><th>Conjoining / 첫가끝</th><th>Tone marks / 방점</th><th>Tone marks, upright / 방점, upright</th><th>Check / 판정</th>
+</tr></thead><tbody></tbody></table></div>
 
 <h2 style="font-size:16px">Try your own text / 직접 입력</h2>
 <textarea id="input" rows="2"></textarea>
@@ -55,7 +63,7 @@ const CASES = [
   ['NFC mixed / NFC 섞임 (가+ᇫ, 마+ᅀᆞᆷ)', [NFC(J(0x1100, 0x1161, 0x11EB)), NFC(J(0x1106, 0x1161)), J(0x1140, 0x119E, 0x11B7)]],
   ['Extended A/B / 확장 A·B', [J(0xA97C, 0x1161), NFC(J(0x1100, 0x1161)) + J(0xD7CB)]],
   ['Complex initial / 겹초성 (ᄊ, ᅛ)', [J(0x110A, 0x119E), J(0x115B, 0x1175)]],
-  ['Tone marks / 방점', [NFC(J(0x1105, 0x1161, 0x11BA)) + '〮', NFC(J(0x1106, 0x1161, 0x11AF)) + '〯']],
+  ['Tone marks / 방점', [NFC(J(0x1105, 0x1161, 0x11BA)) + J(0x302E), NFC(J(0x1106, 0x1161, 0x11AF)) + J(0x302F)]],
 ];
 const FONTS = [
   ["'OH Sans', sans-serif", 'normal'], ["'OH Sans', sans-serif", 'bold'],
@@ -73,9 +81,9 @@ function width(text, family, weight) {
   return w;
 }
 
-function verticalHeight(text, family, weight) {
+function verticalHeight(text, family, weight, orientation = 'mixed') {
   const span = document.createElement('span');
-  span.style.cssText = `writing-mode:vertical-rl;font-family:${family};font-weight:${weight};font-size:100px;white-space:pre;position:absolute;visibility:hidden`;
+  span.style.cssText = `writing-mode:vertical-rl;text-orientation:${orientation};font-family:${family};font-weight:${weight};font-size:100px;white-space:pre;position:absolute;visibility:hidden`;
   span.textContent = text;
   document.body.appendChild(span);
   const h = Math.round(span.getBoundingClientRect().height);
@@ -91,20 +99,34 @@ function cell(syllables, family, weight, check) {
   td.textContent = syllables.join(' ');
   if (check) {
     // Width of one modern syllable in the same font is the reference cell.
-    const unit = width('가', family, weight);
-    const ok = syllables.every(s => {
-      const marks = (s.match(/[〮〯]/g) || []).length;
-      const base = s.replace(/[〮〯]/g, '');
-      const tone = marks ? width(s, family, weight) - width(base, family, weight) : 0;
-      return Math.abs(width(base, family, weight) - unit) < 1 && tone < unit / 2;
-    });
+    const unit = width(J(0xAC00), family, weight);
+    const tones = new RegExp(`[${J(0x302E, 0x302F)}]`, 'g');
+    const notes = [];
+    const ok = syllables.map(s => {
+      const base = s.replace(tones, '');
+      const baseWidth = width(base, family, weight);
+      const tone = base === s ? 0 : width(s, family, weight) - baseWidth;
+      notes.push(base === s ? `${Math.round(baseWidth)}` : `${Math.round(baseWidth)}+${Math.round(tone)}`);
+      return Math.abs(baseWidth - unit) < 1 && tone < unit / 2;
+    }).every(Boolean);
     const mark = document.createElement('div');
-    mark.className = ok ? 'ok' : 'ng';
-    mark.style.fontSize = '13px';
-    mark.style.fontFamily = 'system-ui, sans-serif';
-    mark.textContent = ok ? '✓' : '✗';
+    mark.style.cssText = 'font-size:12px;font-family:system-ui,sans-serif;font-weight:normal';
+    const verdict = document.createElement('span');
+    verdict.className = ok ? 'ok' : 'ng';
+    verdict.textContent = ok ? '✓ ' : '✗ ';
+    // Measured widths at 100px: one cell = the width of 가 (shown first).
+    mark.append(verdict, `${Math.round(unit)} | ${notes.join(' ')}`);
     td.appendChild(mark);
   }
+  return td;
+}
+
+function verticalCell(text, family, weight, orientation) {
+  const td = document.createElement('td');
+  const div = document.createElement('div');
+  div.style.cssText = `writing-mode:vertical-rl;text-orientation:${orientation};font-family:${family};font-weight:${weight};font-size:28px;line-height:1.3;height:5.5em`;
+  div.textContent = text;
+  td.appendChild(div);
   return td;
 }
 
@@ -125,32 +147,42 @@ async function main() {
     tbody.appendChild(tr);
   }
 
-  const vertical = document.getElementById('vertical');
-  const verticalText = NFC('나랏〮말〯' + J(0x110A, 0x119E) + '미〮');
+  const vertical = document.querySelector('#vertical tbody');
+  const rat = J(0xB78F);                      // 랏
+  const ratTone = rat + J(0x302E);            // 랏 + single dot tone mark
+  const modern = J(0xB098) + rat + J(0xB9D0); // 나랏말
+  const conjoining = J(0x110A, 0x119E) + ' ' + J(0x1112, 0x119E, 0x11AB); // ᄊᆞ ᄒᆞᆫ
+  const toneText = J(0xB098) + ratTone + J(0xB9D0, 0x302F); // 나랏말 with single and double dot tone marks
   FONTS.forEach(([family, weight], i) => {
-    const figure = document.createElement('div');
-    figure.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:6px';
-    const text = document.createElement('div');
-    text.style.cssText = `writing-mode:vertical-rl;font-family:${family};font-weight:${weight};font-size:32px;line-height:1.4`;
-    text.textContent = verticalText;
-    const caption = document.createElement('div');
-    caption.style.fontSize = '12px';
-    caption.textContent = document.querySelectorAll('#results th')[i + 1].textContent;
-    figure.append(text, caption);
-    if (i < 4) {
-      const mark = document.createElement('div');
-      const ok = verticalHeight(NFC('랏〮'), family, weight) === verticalHeight('랏', family, weight);
-      mark.className = ok ? 'ok' : 'ng';
-      mark.style.fontSize = '13px';
-      mark.textContent = ok ? '✓' : '✗';
-      figure.appendChild(mark);
+    const tr = document.createElement('tr');
+    const th = document.createElement('th');
+    th.textContent = document.querySelectorAll('#results th')[i + 1].textContent;
+    tr.appendChild(th);
+    tr.appendChild(verticalCell(modern, family, weight, 'mixed'));
+    tr.appendChild(verticalCell(conjoining, family, weight, 'mixed'));
+    tr.appendChild(verticalCell(toneText, family, weight, 'mixed'));
+    tr.appendChild(verticalCell(toneText, family, weight, 'upright'));
+    const td = document.createElement('td');
+    td.style.cssText = 'font-size:12px;white-space:nowrap';
+    for (const orientation of ['mixed', 'upright']) {
+      const base = verticalHeight(rat, family, weight, orientation);
+      const withTone = verticalHeight(ratTone, family, weight, orientation);
+      const line = document.createElement('div');
+      const verdict = document.createElement('span');
+      if (i < 4) {
+        verdict.className = base === withTone ? 'ok' : 'ng';
+        verdict.textContent = base === withTone ? '✓ ' : '✗ ';
+      }
+      line.append(verdict, `${orientation}: ${base} / ${withTone}`);
+      td.appendChild(line);
     }
-    vertical.appendChild(figure);
+    tr.appendChild(td);
+    vertical.appendChild(tr);
   });
 
   const input = document.getElementById('input');
   const custom = document.querySelector('#custom tbody');
-  input.value = NFC('나랏〮말〯' + J(0x110A, 0x119E) + '미〮 듀' + J(0x11F0) + '귁〮에〮 달아〮');
+  input.value = NFC('나랏' + J(0x302E) + '말' + J(0x302F) + J(0x110A, 0x119E) + '미' + J(0x302E) + ' 듀' + J(0x11F0) + '귁' + J(0x302E) + '에' + J(0x302E) + ' 달아' + J(0x302E));
   const render = () => {
     custom.replaceChildren();
     for (const [family, weight] of FONTS) {
