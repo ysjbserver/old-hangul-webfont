@@ -53,8 +53,15 @@ RANGES = [
     (0x25CC, 0x25CC),  # Dotted circle, used as a base for isolated jamo
 ]
 
-# Features needed for Hangul composition and basic shaping.
-LAYOUT_FEATURES = ["ccmp", "locl", "ljmo", "vjmo", "tjmo", "calt", "liga"]
+# Features that have rules for the kept glyphs. Other upstream features
+# (locl, calt, liga, kern, ...) apply only to non-Hangul glyphs.
+LAYOUT_FEATURES = [
+    "ccmp",          # pre-drawn syllables and compound jamo
+    "ljmo",          # initial consonant forms
+    "vjmo",          # vowel forms
+    "tjmo",          # final consonant forms
+    "vert", "vrt2",  # vertical forms of the tone marks
+]
 
 
 def sha256(path):

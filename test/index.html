@@ -36,6 +36,12 @@ The check column measures the width of each syllable: a composed syllable is one
   <th>Case / 사례</th><th>Sans</th><th>Sans Bold</th><th>Serif</th><th>Serif Bold</th><th>No webfont / 웹폰트 없음</th>
 </tr></thead><tbody></tbody></table></div>
 
+<h2 style="font-size:16px">Vertical writing / 세로쓰기</h2>
+<p>In vertical text the tone marks (〮 〯) should sit beside the syllable (on its left) without taking a cell of their own.
+The check measures the height of a syllable with a tone mark: it should be one cell.<br>
+세로쓰기에서는 방점이 음절 옆(왼쪽)에 붙고, 따로 한 칸을 차지하지 않아야 합니다. 판정은 방점이 붙은 음절의 세로 길이가 한 칸인지 잽니다.</p>
+<div id="vertical" class="wrap" style="display:flex;gap:24px"></div>
+
 <h2 style="font-size:16px">Try your own text / 직접 입력</h2>
 <textarea id="input" rows="2"></textarea>
 <div class="wrap"><table id="custom"><tbody></tbody></table></div>
@@ -65,6 +71,16 @@ function width(text, family, weight) {
   const w = span.getBoundingClientRect().width;
   span.remove();
   return w;
+}
+
+function verticalHeight(text, family, weight) {
+  const span = document.createElement('span');
+  span.style.cssText = `writing-mode:vertical-rl;font-family:${family};font-weight:${weight};font-size:100px;white-space:pre;position:absolute;visibility:hidden`;
+  span.textContent = text;
+  document.body.appendChild(span);
+  const h = Math.round(span.getBoundingClientRect().height);
+  span.remove();
+  return h;
 }
 
 function cell(syllables, family, weight, check) {
@@ -108,6 +124,29 @@ async function main() {
     FONTS.forEach(([family, weight], i) => tr.appendChild(cell(syllables, family, weight, i < 4)));
     tbody.appendChild(tr);
   }
+
+  const vertical = document.getElementById('vertical');
+  const verticalText = NFC('나랏〮말〯' + J(0x110A, 0x119E) + '미〮');
+  FONTS.forEach(([family, weight], i) => {
+    const figure = document.createElement('div');
+    figure.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:6px';
+    const text = document.createElement('div');
+    text.style.cssText = `writing-mode:vertical-rl;font-family:${family};font-weight:${weight};font-size:32px;line-height:1.4`;
+    text.textContent = verticalText;
+    const caption = document.createElement('div');
+    caption.style.fontSize = '12px';
+    caption.textContent = document.querySelectorAll('#results th')[i + 1].textContent;
+    figure.append(text, caption);
+    if (i < 4) {
+      const mark = document.createElement('div');
+      const ok = verticalHeight(NFC('랏〮'), family, weight) === verticalHeight('랏', family, weight);
+      mark.className = ok ? 'ok' : 'ng';
+      mark.style.fontSize = '13px';
+      mark.textContent = ok ? '✓' : '✗';
+      figure.appendChild(mark);
+    }
+    vertical.appendChild(figure);
+  });
 
   const input = document.getElementById('input');
   const custom = document.querySelector('#custom tbody');
