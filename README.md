@@ -110,13 +110,19 @@ Open [`test/index.html`](test/index.html) through a web server
 python -m http.server 8765
 ```
 
-Then visit <http://localhost:8765/test/>. Each case shows ✓ when every
-syllable is one cell wide. The vertical writing section shows ✓ when a
-syllable with a tone mark is one cell tall. The page also has a box for
-trying your own text.
+Then visit <http://localhost:8765/test/>, or the published page at
+<https://ysjbserver.github.io/old-hangul-webfont/test/>.
+Each case shows ✓ when every syllable is one cell wide, with the measured
+widths next to it. The vertical writing section shows ✓ when a syllable with
+a tone mark is one cell tall. The page also has a box for trying your own text.
 
-Tested on Chrome (Windows): all cases, including vertical writing, lay out the
-same way as the original fonts. Safari and Firefox have not been tested yet.
+Tested on Chrome (Windows) and Safari 18.2 (macOS 15).
+
+### Known issues
+
+- Safari lays vertical text on its side when it contains conjoining jamo or
+  tone marks, with or without this font. Use `text-orientation: upright`
+  to keep it upright.
 
 ## License
 
@@ -191,11 +197,19 @@ python build.py
 python -m http.server 8765
 ```
 
-그다음 <http://localhost:8765/test/>를 엽니다. 음절마다 한 칸 폭이면 ✓가 표시됩니다.
+그다음 <http://localhost:8765/test/>를 엽니다. 공개된 시험 페이지
+<https://ysjbserver.github.io/old-hangul-webfont/test/>에서도 확인할 수 있습니다.
+음절마다 한 칸 폭이면 ✓가 표시되고, 옆에 잰 폭이 함께 나옵니다.
 세로쓰기 칸에서는 방점이 붙은 음절의 세로 길이가 한 칸이면 ✓가 표시됩니다.
-Windows의 Chrome에서는 세로쓰기를 포함한 모든 사례가 원본과 같게 나왔고, Safari와 Firefox는 아직 확인하지 않았습니다.
 다시 만들어도 결과 파일이 한 바이트도 다르지 않으므로, 다시 만든 뒤
 `git status`에 `fonts/` 변경이 없으면 공개된 파일이 이 스크립트로 만든 것임을 확인할 수 있습니다.
+
+Windows의 Chrome과 macOS 15의 Safari 18.2에서 확인했습니다.
+
+### 알려진 문제
+
+- Safari는 첫가끝 자모나 방점이 들어간 세로쓰기 글을 옆으로 눕힙니다. 이 글꼴을
+  쓰지 않아도 마찬가지입니다. `text-orientation: upright`를 주면 똑바로 섭니다.
 
 ### 라이선스
 
