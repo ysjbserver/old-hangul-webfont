@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Old Hangul Webfont Test</title>
+<style>
+@font-face { font-family: 'OH Sans'; src: url('../fonts/NotoSansCJKKROldHangul-Regular.woff2') format('woff2'); }
+@font-face { font-family: 'OH Sans'; font-weight: bold; src: url('../fonts/NotoSansCJKKROldHangul-Bold.woff2') format('woff2'); }
+@font-face { font-family: 'OH Serif'; src: url('../fonts/NotoSerifCJKKROldHangul-Regular.woff2') format('woff2'); }
+@font-face { font-family: 'OH Serif'; font-weight: bold; src: url('../fonts/NotoSerifCJKKROldHangul-Bold.woff2') format('woff2'); }
+:root { color-scheme: light dark; --fg: #111; --bg: #fff; --line: #bbb; --ok: #0a7a2f; --ng: #c0262d; }
+@media (prefers-color-scheme: dark) { :root { --fg: #eee; --bg: #161616; --line: #555; --ok: #5fd07f; --ng: #ff7b7b; } }
+body { margin: 16px; font-family: system-ui, sans-serif; color: var(--fg); background: var(--bg); }
+h1 { font-size: 20px; }
+p, li { font-size: 14px; line-height: 1.6; }
+.wrap { overflow-x: auto; }
+table { border-collapse: collapse; }
+th, td { border: 1px solid var(--line); padding: 6px 10px; text-align: left; vertical-align: top; }
+th { font-size: 13px; font-weight: 600; }
+td.sample { font-size: 28px; white-space: nowrap; }
+.ok { color: var(--ok); font-weight: 700; }
+.ng { color: var(--ng); font-weight: 700; }
+textarea { width: 100%; max-width: 640px; font-size: 18px; }
+#custom td { font-size: 28px; }
+</style>
+</head>
+<body>
+<h1>Old Hangul Webfont Test / 옛한글 웹폰트 시험</h1>
+<p>Each sample should appear as one composed syllable block per syllable.
+The check column measures the width of each syllable: a composed syllable is one cell wide.<br>
+각 음절이 한 덩어리로 모여 보이면 정상입니다. 판정 칸은 음절 폭을 재서, 한 칸 폭이면 ✓, 풀려서 넓어지면 ✗로 표시합니다.</p>
+<p id="env"></p>
+
+<div class="wrap"><table id="results"><thead><tr>
+  <th>Case / 사례</th><th>Sans</th><th>Sans Bold</th><th>Serif</th><th>Serif Bold</th><th>No webfont / 웹폰트 없음</th>
+</tr></thead><tbody></tbody></table></div>
+
+<h2 style="font-size:16px">Try your own text / 직접 입력</h2>
+<textarea id="input" rows="2"></textarea>
+<div class="wrap"><table id="custom"><tbody></tbody></table></div>
+
+<script>
+// Samples are built from code points so that editors cannot normalize them.
+const J = (...cps) => String.fromCodePoint(...cps);
+const NFC = s => s.normalize('NFC');
+const CASES = [
+  ['Conjoining jamo only / 첫가끝만', [J(0x1112, 0x119E, 0x11AB), J(0x112B, 0x1175), J(0x1100, 0x119E, 0x11EB)]],
+  ['NFC mixed / NFC 섞임 (가+ᇫ, 마+ᅀᆞᆷ)', [NFC(J(0x1100, 0x1161, 0x11EB)), NFC(J(0x1106, 0x1161)), J(0x1140, 0x119E, 0x11B7)]],
+  ['Extended A/B / 확장 A·B', [J(0xA97C, 0x1161), NFC(J(0x1100, 0x1161)) + J(0xD7CB)]],
+  ['Complex initial / 겹초성 (ᄊ, ᅛ)', [J(0x110A, 0x119E), J(0x115B, 0x1175)]],
+  ['Tone marks / 방점', [NFC(J(0x1105, 0x1161, 0x11BA)) + '〮', NFC(J(0x1106, 0x1161, 0x11AF)) + '〯']],
+];
+const FONTS = [
+  ["'OH Sans', sans-serif", 'normal'], ["'OH Sans', sans-serif", 'bold'],
+  ["'OH Serif', serif", 'normal'], ["'OH Serif', serif", 'bold'],
+  ['sans-serif', 'normal'],
+];
+
+function width(text, family, weight) {
+  const span = document.createElement('span');
+  span.style.cssText = `font-family:${family};font-weight:${weight};font-size:100px;white-space:pre;position:absolute;visibility:hidden`;
+  span.textContent = text;
+  document.body.appendChild(span);
+  const w = span.getBoundingClientRect().width;
+  span.remove();
+  return w;
+}
+
+function cell(syllables, family, weight, check) {
+  const td = document.createElement('td');
+  td.className = 'sample';
+  td.style.fontFamily = family;
+  td.style.fontWeight = weight;
+  td.textContent = syllables.join(' ');
+  if (check) {
+    // Width of one modern syllable in the same font is the reference cell.
+    const unit = width('가', family, weight);
+    const ok = syllables.every(s => {
+      const marks = (s.match(/[〮〯]/g) || []).length;
+      const base = s.replace(/[〮〯]/g, '');
+      const tone = marks ? width(s, family, weight) - width(base, family, weight) : 0;
+      return Math.abs(width(base, family, weight) - unit) < 1 && tone < unit / 2;
+    });
+    const mark = document.createElement('div');
+    mark.className = ok ? 'ok' : 'ng';
+    mark.style.fontSize = '13px';
+    mark.style.fontFamily = 'system-ui, sans-serif';
+    mark.textContent = ok ? '✓' : '✗';
+    td.appendChild(mark);
+  }
+  return td;
+}
+
+async function main() {
+  await Promise.all(['OH Sans', 'OH Serif'].flatMap(f =>
+    ['normal', 'bold'].map(w => document.fonts.load(`${w} 20px '${f}'`, '가ᄀ'))));
+  const loaded = [...document.fonts].filter(f => f.status === 'loaded').length;
+  document.getElementById('env').textContent =
+    `Webfonts loaded / 불러온 웹폰트: ${loaded}/4 — ${navigator.userAgent}`;
+
+  const tbody = document.querySelector('#results tbody');
+  for (const [label, syllables] of CASES) {
+    const tr = document.createElement('tr');
+    const th = document.createElement('th');
+    th.textContent = label;
+    tr.appendChild(th);
+    FONTS.forEach(([family, weight], i) => tr.appendChild(cell(syllables, family, weight, i < 4)));
+    tbody.appendChild(tr);
+  }
+
+  const input = document.getElementById('input');
+  const custom = document.querySelector('#custom tbody');
+  input.value = NFC('나랏〮말〯' + J(0x110A, 0x119E) + '미〮 듀' + J(0x11F0) + '귁〮에〮 달아〮');
+  const render = () => {
+    custom.replaceChildren();
+    for (const [family, weight] of FONTS) {
+      const tr = document.createElement('tr');
+      const td = document.createElement('td');
+      td.style.fontFamily = family;
+      td.style.fontWeight = weight;
+      td.textContent = NFC(input.value);
+      tr.appendChild(td);
+      custom.appendChild(tr);
+    }
+  };
+  input.addEventListener('input', render);
+  render();
+}
+main();
+</script>
+</body>
+</html>
