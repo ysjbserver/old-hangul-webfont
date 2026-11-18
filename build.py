@@ -117,6 +117,11 @@ def build(src, family, style):
     options.name_IDs = ["*"]
     options.name_languages = ["*"]
     options.notdef_outline = True
+    # fontTools packs GSUB/GPOS with HarfBuzz when uharfbuzz is installed and
+    # silently falls back to its own serializer otherwise; the two give
+    # different bytes. Require HarfBuzz so a missing or failing uharfbuzz
+    # stops the build instead of producing fonts that differ from SHA256SUMS.
+    options.harfbuzz_repacker = True
 
     font = subset.load_font(str(src), options)
     subsetter = subset.Subsetter(options)

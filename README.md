@@ -89,7 +89,7 @@ compose in Chrome even with the upstream font. Use the dedicated code point inst
 
 ## Build
 
-Requires Python 3.
+Requires Python 3.11 or later.
 
 ```sh
 pip install -r requirements.txt
@@ -100,6 +100,9 @@ python build.py
 SHA-256, and writes the woff2 files and `SHA256SUMS` to `fonts/`.
 The build is reproducible: running it again gives byte-identical files,
 so `git status` should show no changes in `fonts/` after a rebuild.
+This holds only with the exact versions in `requirements.txt`.
+`uharfbuzz` is required: fontTools lays out the GSUB/GPOS tables differently
+without it, so `build.py` stops with an error if it is missing.
 
 ## Test
 
@@ -203,6 +206,9 @@ python -m http.server 8765
 세로쓰기 칸에서는 방점이 붙은 음절의 세로 길이가 한 칸이면 ✓가 표시됩니다.
 다시 만들어도 결과 파일이 한 바이트도 다르지 않으므로, 다시 만든 뒤
 `git status`에 `fonts/` 변경이 없으면 공개된 파일이 이 스크립트로 만든 것임을 확인할 수 있습니다.
+단, `requirements.txt`에 적힌 판(Python 3.11 이상)을 그대로 설치해야 합니다.
+특히 `uharfbuzz`가 없으면 fontTools가 GSUB/GPOS 표를 다르게 배치하므로,
+`build.py`는 이 경우 오류를 내고 멈춥니다.
 
 Windows의 Chrome과 macOS 15의 Safari 18.2에서 확인했습니다.
 
